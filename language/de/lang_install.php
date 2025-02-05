@@ -87,6 +87,7 @@ $lang['L_SAFEMODEDESC']="Da PHP auf diesem Server mit der Option \"safe_mode=on\
 
 ";
 $lang['L_ENTER_DB_INFO']="Klicken Sie zuerst auf den Button \"zu MySQL verbinden\". Nur wenn daraufhin keine Datenbank erkannt werden konnte, ist hier eine Angabe notwendig.";
+$lang['L_CONFIG_SAVE_ERROR'] = 'Fehler beim Speichern der Konfigurationsdatei!';
 
 
 ?>

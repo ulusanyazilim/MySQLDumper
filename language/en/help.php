@@ -1,8 +1,20 @@
 <div id="content">
 <h3>About this project</h3>
 The idea for this project comes from Daniel Schlichtholz.<p>In 2004 he created a forum called <a href="http://forum.mysqldumper.de" target="_blank">MySQLDumper</a> and soon, programmers who wrote new scripts, supplemented Daniel's scripts.<br>After a short time the small backup-script developed into a stately project.<p>If you have any improvement suggestions you can visit the MySQLDumper-Forum: <a href="http://forum.mysqldumper.de" target="_blank">http://www.mysqldumper.de</a>.<p>We wish you a lot of fun with this project.<br><br><h4>The MySQLDumper-Team</h4>
-<table><tr><td><img src="images/logo.gif" alt="MySQLDumper" border="0"></td><td valign="top">
-Daniel Schlichtholz<br>
+
+	<h3>PHP Version Update</h3>
+<p>This project has been updated to require PHP 7.4.0 or higher to ensure better security and performance. The update includes:</p>
+<ul>
+  <li>Improved performance with newer PHP features</li>
+  <li>Bug fixes and security improvements</li>
+</ul>
+<p>The updated version was developed by <a href="https://hucrem.com" target="_blank">Hucrem.com</a> to provide:</p>
+<p>For more information about the PHP update and new features, visit <a href="https://hucrem.com" target="_blank">Hucrem.com</a>.</p>
+
+
+	<table><tr><td><img src="images/logo.gif" alt="MySQLDumper" border="0"></td><td valign="top">
+	Daniel Schlichtholz<br>
+	Mehmet Ali Uluşan<br>
 </td></tr></table>
 
 <h3>MySQLDumper Help</h3>
@@ -16,7 +28,7 @@ http://forum.mysqldumper.de
 
 <h4>System Mandatories</h4>
 The Script works with nearly any server (Windows, Linux, ...) <br>
-and PHP >= Version 4.3.4 with GZip-Library, MySQL (>= 3.23), JavaScript (must be enabled).
+and PHP >= Version 7.4.0 with GZip-Library, MySQL (>= 3.23), JavaScript (must be enabled).
 
 <a href="install.php?language=de" target="_top"><h4>Installation</h4></a>
 The installation is very easy.

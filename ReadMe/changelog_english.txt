@@ -1,4 +1,4 @@
-Version 1.24.4
+Version 1.25.0
 
 We addressed the following issues:
 - General: If "inc" was anywhere in the path or the domain to the MySQLDumper-Root-Diretory the file runtime.php couldn't be included.

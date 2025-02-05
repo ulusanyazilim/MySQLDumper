@@ -1,4 +1,4 @@
-Versión 1.24.4
+Versión 1.25.0
 
 Hemos abordado los siguientes temas:
 - General: Si "inc" estaba en cualquier parte de la ruta o el dominio a la MySQLDumper-Root-Diretory, el archivo runtime.php no pudo ser incluido.

@@ -14,9 +14,7 @@ if (isset($_GET['filename']))
 		{
 			foreach ($val as $key2=>$val2)
 			{
-				if ($config['magic_quotes_gpc']) $restore[stripslashes($key)][stripslashes($key2)]=stripslashes($val2);
-				else
-					$restore[$key][$key2]=$val2;
+				$restore[$key][$key2] = $val2;
 			}
 		}
 	}
@@ -124,52 +122,46 @@ if ($restore['filehandle'])
 		
 		WHILE (($a<$restore['anzahl_zeilen'])&&(!$restore['fileEOF'])&&($dauer<$restore['max_zeit'])&&!$restore['EOB'])
 		{
-			$sql_command=get_sqlbefehl();
-			if ($sql_command>'')
-			{
-				//WriteLog(htmlspecialchars($sql_command));
-				$res=mysqli_query($config['dbconnection'], $sql_command);
-				if (!$res===false)
-				{
-					$anzsql=mysqli_affected_rows($config['dbconnection']);
-					// Anzahl der eingetragenen Datensaetze ermitteln (Indexaktionen nicht zaehlen)
-					$command=strtoupper(substr($sql_command,0,7));
-					if ($command=='INSERT ')
-					{
-						$anzsql=mysqli_affected_rows($config['dbconnection']);
-						if ($anzsql>0) $restore['eintraege_ready']+=$anzsql;
-					}
+			$sql_command = get_sqlbefehl();
+			if ($sql_command > '') {
+				// INSERT komutlarında IGNORE ekleyelim
+				if (stripos($sql_command, 'INSERT INTO') === 0) {
+					$sql_command = str_ireplace('INSERT INTO', 'INSERT IGNORE INTO', $sql_command);
 				}
-				else
-				{
-					// Bei MySQL-Fehlern sofort abbrechen und Info ausgeben
-					$meldung=@((is_object($config['dbconnection'])) ? mysqli_error($config['dbconnection']) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false));
-					if ($meldung!='')
-					{
-						if (strtolower(substr($meldung,0,15))=='duplicate entry')
-						{
-							ErrorLog('RESTORE',$databases['db_actual'],$sql_command,$meldung,1);
+				
+				$res = mysqli_query($config['dbconnection'], $sql_command);
+				if (!$res === false) {
+					$anzsql = mysqli_affected_rows($config['dbconnection']);
+					// Anzahl der eingetragenen Datensaetze ermitteln (Indexaktionen nicht zaehlen)
+					$command = strtoupper(substr($sql_command, 0, 7));
+					if ($command == 'INSERT ') {
+						$anzsql = mysqli_affected_rows($config['dbconnection']);
+						if ($anzsql > 0) $restore['eintraege_ready'] += $anzsql;
+					}
+				} else {
+					// MySQL hatalarını kontrol et
+					$meldung = @((is_object($config['dbconnection'])) ? mysqli_error($config['dbconnection']) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false));
+					if ($meldung != '') {
+						if (strtolower(substr($meldung, 0, 15)) == 'duplicate entry') {
+							// Duplicate entry hatalarını log'a yaz ve devam et
+							ErrorLog('RESTORE', $databases['db_actual'], $sql_command, $meldung, 1);
 							$restore['notices']++;
-						}
-						else
-						{
-							if ($config['stop_with_error']==0)
-							{
-								Errorlog('RESTORE',$databases['db_actual'],$sql_command,$meldung);
+							continue;
+						} else {
+							if ($config['stop_with_error'] == 0) {
+								Errorlog('RESTORE', $databases['db_actual'], $sql_command, $meldung);
 								$restore['errors']++;
-							}
-							else
-							{
-								Errorlog('RESTORE',$databases['db_actual'],$sql_command,'Restore failed: '.$meldung,0);
-								SQLError($sql_command,$meldung);
-								die($sql_command.' -> '.$meldung);
+							} else {
+								Errorlog('RESTORE', $databases['db_actual'], $sql_command, 'Restore failed: ' . $meldung, 0);
+								SQLError($sql_command, $meldung);
+								die($sql_command . ' -> ' . $meldung);
 							}
 						}
 					}
 				}
 			}
 			$a++;
-			$dauer=time()-$restore['startzeit'];
+			$dauer = time() - $restore['startzeit'];
 		}
 		$eingetragen=$a-1;
 	}

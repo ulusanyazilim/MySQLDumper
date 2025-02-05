@@ -6,7 +6,7 @@ if (version_compare(PHP_VERSION, '5.3.0') >= 0) {
 
 if (function_exists("date_default_timezone_set")) date_default_timezone_set(@date_default_timezone_get());
 //Konstanten
-if (!defined('MSD_VERSION')) define('MSD_VERSION','1.24.4');
+if (!defined('MSD_VERSION')) define('MSD_VERSION','1.25.0');
 if (!defined('MSD_OS')) define('MSD_OS',PHP_OS);
 if (!defined('MSD_OS_EXT')) define('MSD_OS_EXT',@php_uname());
 if (!defined('config') || !is_array($config)) $config=array();
@@ -46,7 +46,20 @@ $config['max_execution_time']=( $config['max_execution_time'] <= 0 ) ? 30 : $con
 if ($config['max_execution_time'] > 30) $config['max_execution_time']=30;
 $config['upload_max_filesize']=get_cfg_var('upload_max_filesize');
 $config['safe_mode']=get_cfg_var('safe_mode');
-$config['magic_quotes_gpc']=get_magic_quotes_gpc();
+
+// Modern güvenlik önlemleri
+function cleanInput($data) {
+    if (is_array($data)) {
+        return array_map('cleanInput', $data);
+    }
+    return htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+}
+
+// Gelen verileri temizle
+$_GET = cleanInput($_GET);
+$_POST = cleanInput($_POST);
+$_COOKIE = cleanInput($_COOKIE);
+
 $config['disabled']=get_cfg_var('disable_functions');
 $config['phpextensions']=implode(', ',get_loaded_extensions());
 $m=trim(str_replace('M','',ini_get('memory_limit')));
@@ -83,7 +96,6 @@ $config_dontsave=Array(
 					'homepage',
 					'max_execution_time',
 					'safe_mode',
-					'magic_quotes_gpc',
 					'disabled',
 					'phpextensions',
 					'php_ram',
@@ -105,16 +117,13 @@ $config_dontsave=Array(
 					'files'
 );
 
-$dontBackupDatabases = array('mysql', 'information_schema');
-
-// Automatisches entfernen von Slashes und Leerzeichen vorn und hinten abschneiden
-if (1==get_magic_quotes_gpc())
-{
-	$_POST=stripslashes_deep($_POST);
-	$_GET=stripslashes_deep($_GET);
-}
-$_POST=trim_deep($_POST);
-$_GET=trim_deep($_GET);
+// Yedeklenmeyecek sistem veritabanlarını tanımlayalım
+$dontBackupDatabases = array(
+    'mysql',
+    'information_schema',
+    'performance_schema',
+    'sys'
+);
 
 function v($t)
 {

@@ -51,7 +51,7 @@ else
 //Variabeln
 $phase=( isset($phase) ) ? $phase : 0;
 if (isset($_POST['manual_db'])) $manual_db=trim($_POST['manual_db']);
-$connstr = "$dbhost|$dbuser|$dbpass|$dbport|$dbsocket|$manual_db";
+$connstr = "$dbhost|$dbuser|$dbpass|$manual_db|$dbport|$dbsocket";
 $connection='';
 $delfiles=Array();
 
@@ -245,7 +245,6 @@ switch ($phase)
 				    $databases = array();
 					echo '<p class="success">' . $lang['L_CONNECTION_OK'] . '</p><span class="ssmall">';
 					$connection="ok";
-					$connstr="$dbhost|$dbuser|$dbpass|$dbport|$dbsocket|$manual_db";
 					echo '<input type="hidden" name="connstr" value="' . $connstr . '">';
 					if ($manual_db > '') SearchDatabases(1,$manual_db);
 					else SearchDatabases(1);
@@ -311,11 +310,46 @@ switch ($phase)
 			if ($stored == 6) break;
 		}
 		$ret=true;
-		if ($fp=fopen("config.php","wb"))
-		{
-			if (!fwrite($fp,implode($tmp,""))) $ret=false;
-			if (!fclose($fp)) $ret=false;
-			@chmod("config.php",0644);
+		if (!is_writable("config.php")) {
+			echo '<p class="warnung">' . $lang['L_CONFIGNOTWRITABLE'] . '</p>';
+			exit;
+		}
+		if ($fp = fopen("config.php", "r+")) {
+			$lines = file("config.php");
+			$content = "";
+			
+			foreach ($lines as $line) {
+				if (strpos($line, '$config[\'dbhost\']') !== false) {
+					$content .= '$config[\'dbhost\'] = \'' . addslashes($dbhost) . '\';' . "\n";
+				}
+				else if (strpos($line, '$config[\'dbport\']') !== false) {
+					$content .= '$config[\'dbport\'] = \'' . addslashes($dbport) . '\';' . "\n";
+				}
+				else if (strpos($line, '$config[\'dbsocket\']') !== false) {
+					$content .= '$config[\'dbsocket\'] = \'' . addslashes($dbsocket) . '\';' . "\n";
+				}
+				else if (strpos($line, '$config[\'dbuser\']') !== false) {
+					$content .= '$config[\'dbuser\'] = \'' . addslashes($dbuser) . '\';' . "\n";
+				}
+				else if (strpos($line, '$config[\'dbpass\']') !== false) {
+					$content .= '$config[\'dbpass\'] = \'' . addslashes($dbpass) . '\';' . "\n";
+				}
+				else {
+					$content .= $line; // Diğer tüm satırları olduğu gibi koru
+				}
+			}
+			
+			// Dosyayı başa sar ve yaz
+			rewind($fp);
+			ftruncate($fp, 0); // Dosyayı temizle
+			if (!fwrite($fp, $content)) {
+				echo '<p class="warnung">' . $lang['L_CONFIG_SAVE_ERROR'] . '</p>';
+				fclose($fp);
+				exit;
+			}
+			
+			fclose($fp);
+			@chmod("config.php", 0644);
 		}
 		if (!$ret)
 		{
@@ -340,59 +374,89 @@ switch ($phase)
 		break;
 
 	case 4: //Verzeichnisse
-		if (isset($_POST['submit']))
-		{
-			$ret=true;
-			if ($fp=fopen("config.php","wb"))
-			{
-				if (!fwrite($fp,stripslashes(stripslashes($_POST['configfile'])))) $ret=false;
-				if (!fclose($fp)) $ret=false;
-			}
-			else
-				$ret=false;
-
-			if ($ret == false)
-			{
-				echo '<br><strong>' . $lang['L_ERRORMAN'] . ' config.php ' . $lang['L_MANUELL'] . '.';
-				die();
-			}
-		}
-
 		echo '<h6>' . $lang['L_CREATEDIRS'] . '</h6>';
-		$check_dirs=ARRAY(
-
-							"work/",
-							"work/config/",
-							"work/log/",
-							"work/backup/"
+		
+		// Oluşturulacak dizinleri tanımla
+		$check_dirs = array(
+			"work/",
+			"work/config/",
+			"work/log/",
+			"work/backup/"
 		);
-		$msg='';
-		foreach ($check_dirs as $d)
-		{
-			$success=SetFileRechte($d,1,0777);
-			if ($success != 1) $msg.=$success . '<br>';
-		}
-
-		if ($msg > '') echo '<b>' . $msg . '</b>';
-
-		$iw[0]=IsWritable("work");
-		$iw[1]=IsWritable("work/config");
-		$iw[2]=IsWritable("work/log");
-		$iw[3]=IsWritable("work/backup");
-/*
-		// save manual_db
-		if ($manual_db > '')
-		{
-			if (file_exists('./' . $config['files']['dbs_manual'])) @unlink('./' . $config['files']['dbs_manual']);
-			$file_handle=fopen('./' . $config['files']['dbs_manual'],'a');
-			if ($file_handle)
-			{
-				fwrite($file_handle,$manual_db);
-				fclose($file_handle);
-				@chmod('./' . $config['files']['dbs_manual'],0777);
+		
+		// Dizinleri oluştur
+		$msg = '';
+		foreach ($check_dirs as $d) {
+			if (!file_exists($d)) {
+				if (!@mkdir($d, 0777, true)) {
+					$msg .= sprintf($lang['L_ERROR_CREATING_DIR'], $d) . '<br>';
+				} else {
+					@chmod($d, 0777);
+				}
+			}
+			
+			// Dizin yazılabilir mi kontrol et
+			if (!is_writable($d)) {
+				@chmod($d, 0777);
+				if (!is_writable($d)) {
+					$msg .= sprintf($lang['L_ERROR_WRITEABLE_DIR'], $d) . '<br>';
+				}
 			}
 		}
-*/
+		
+		// work/config/mysqldumper.conf.php dosyasını oluştur
+		$config_file = 'work/config/mysqldumper.conf.php';
+		if (!file_exists($config_file)) {
+			// config.php'nin içeriğini oku
+			$config_content = file_get_contents('config.php');
+			
+			// Veritabanı bağlantı bilgilerini güncelle
+			$config_content = preg_replace(
+				"/\\\$config\['dbhost'\] = '.*?';/",
+				"\$config['dbhost'] = '" . addslashes($dbhost) . "';",
+				$config_content
+			);
+			$config_content = preg_replace(
+				"/\\\$config\['dbport'\] = '.*?';/",
+				"\$config['dbport'] = '" . addslashes($dbport) . "';",
+				$config_content
+			);
+			$config_content = preg_replace(
+				"/\\\$config\['dbsocket'\] = '.*?';/",
+				"\$config['dbsocket'] = '" . addslashes($dbsocket) . "';",
+				$config_content
+			);
+			$config_content = preg_replace(
+				"/\\\$config\['dbuser'\] = '.*?';/",
+				"\$config['dbuser'] = '" . addslashes($dbuser) . "';",
+				$config_content
+			);
+			$config_content = preg_replace(
+				"/\\\$config\['dbpass'\] = '.*?';/",
+				"\$config['dbpass'] = '" . addslashes($dbpass) . "';",
+				$config_content
+			);
+			
+			// Dosyayı yaz
+			if (!@file_put_contents($config_file, $config_content)) {
+				$msg .= sprintf($lang['L_ERROR_CREATING_FILE'], $config_file) . '<br>';
+			} else {
+				@chmod($config_file, 0666);
+			}
+		}
+
+		if ($msg > '') {
+			echo '<b>' . $msg . '</b>';
+		} else {
+			echo '<p class="success">' . $lang['L_DIRS_CREATED'] . '</p>';
+		}
+		
+		// Dizinlerin yazılabilirliğini kontrol et
+		$iw[0] = IsWritable("work");
+		$iw[1] = IsWritable("work/config");
+		$iw[2] = IsWritable("work/log");
+		$iw[3] = IsWritable("work/backup");
+
 		if ($iw[0] && $iw[1] && $iw[2] && $iw[3])
 		{
 			echo '<script language="javascript">';

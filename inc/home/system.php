@@ -8,6 +8,17 @@ if ($res)
 	$row=mysqli_fetch_array($res);
 	$data_dir=$row[1];
 }
+
+// Binary log durumunu kontrol edip ona göre reset yapalım
+$binlog_enabled = false;
+$res = mysqli_query($config['dbconnection'], "SHOW VARIABLES LIKE 'log_bin'");
+if ($res) {
+	$row = mysqli_fetch_array($res);
+	if ($row && strtolower($row['Value']) == 'on') {
+		$binlog_enabled = true;
+	}
+}
+
 switch ($sysaction)
 {
 	case 1: //FLUSH PRIVILEGES
@@ -52,41 +63,50 @@ switch ($sysaction)
 		break;
 	case 4: //SHOW MASTER LOGS
 		$msg="> operating SHOW MASTER LOGS<br>";
-		$res=@mysqli_query($config['dbconnection'], "SHOW MASTER LOGS");
-		$meldung=((is_object($config['dbconnection'])) ? mysqli_error($config['dbconnection']) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false));
-		if ($meldung!="")
-		{
-			$msg.='&gt; MySQL-Error: '.$meldung;
-		}
-		else
-		{
-			$numrows=mysqli_num_rows($res);
-			if ($numrows==0||$numrows===false)
-			{
-				$msg.='&gt; there are no master log-files';
-			}
-			else
-			{
-				$msg.='&gt; there are '.$numrows.' logfiles<br>';
-				for ($i=0; $i<$numrows; $i++)
-				{
-					$row=mysqli_fetch_row($res);
-					$msg.='&gt; '.$row[0].'&nbsp;&nbsp;&nbsp;'.(($data_dir) ? byte_output(@filesize($data_dir.$row[0])) : '').'<br>';
+		if ($binlog_enabled) {
+			try {
+				$res=@mysqli_query($config['dbconnection'], "SHOW MASTER LOGS");
+				$meldung=((is_object($config['dbconnection'])) ? mysqli_error($config['dbconnection']) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false));
+				if ($meldung!="") {
+					$msg.='&gt; MySQL-Error: '.$meldung;
+				} else {
+					$numrows=mysqli_num_rows($res);
+					if ($numrows==0||$numrows===false) {
+						$msg.='&gt; there are no master log-files';
+					} else {
+						$msg.='&gt; there are '.$numrows.' logfiles<br>';
+						for ($i=0; $i<$numrows; $i++) {
+							$row=mysqli_fetch_row($res);
+							$msg.='&gt; '.$row[0].'&nbsp;&nbsp;&nbsp;'.(($data_dir) ? byte_output(@filesize($data_dir.$row[0])) : '').'<br>';
+						}
+					}
 				}
+			} catch (Exception $e) {
+				$msg.='&gt; Binary logging is not enabled on this server';
 			}
+		} else {
+			$msg.='&gt; Binary logging is not enabled on this server';
 		}
 		break;
 	case 5: //RESET MASTER
 		$msg="&gt; operating RESET MASTER<br>";
-		$res=@mysqli_query($config['dbconnection'], "RESET MASTER");
-		$meldung=((is_object($config['dbconnection'])) ? mysqli_error($config['dbconnection']) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false));
-		if ($meldung!="")
-		{
-			$msg.='&gt; MySQL-Error: '.$meldung;
-		}
-		else
-		{
-			$msg.="&gt; All Masterlogs were deleted.";
+		if ($binlog_enabled) {
+			try {
+				$res=@mysqli_query($config['dbconnection'], "RESET MASTER");
+				$meldung=((is_object($config['dbconnection'])) ? mysqli_error($config['dbconnection']) : (($___mysqli_res = mysqli_connect_error()) ? $___mysqli_res : false));
+				if ($meldung!="")
+				{
+					$msg.='&gt; MySQL-Error: '.$meldung;
+				}
+				else
+				{
+					$msg.="&gt; All Masterlogs were deleted.";
+				}
+			} catch (Exception $e) {
+				$msg.='&gt; Binary logging is not enabled on this server';
+			}
+		} else {
+			$msg.='&gt; Binary logging is not enabled on this server';
 		}
 		break;
 }
